@@ -1,11 +1,11 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import hero from './assets/hero.jpg'
 import heroSmall from './assets/hero-small.jpg'
 import kakaoMapIcon from './assets/maps/kakao.png'
 import naverMapIcon from './assets/maps/naver.png'
 import tmapIcon from './assets/maps/tmap.png'
 import { copyText, downloadCalendar, shareInvitation } from './actions'
-import { CalendarGrid, GalleryGrid, GalleryViewer, Icon, Reveal, Toast, useToast, type GalleryImage } from './components'
+import { CalendarGrid, GalleryGrid, GalleryViewer, Icon, Reveal, Toast, useToast } from './components'
 import Guestbook from './Guestbook'
 import Rsvp from './Rsvp'
 import { invitation, kakaoMapUrl, naverMapUrl, tmapAndroidMapUrl, tmapIosMapUrl } from './config'
@@ -18,23 +18,57 @@ const gallery = Object.entries(import.meta.glob<string>('./assets/gallery/*.{jpg
   import: 'default',
 }))
   .sort(([left], [right]) => left.localeCompare(right, undefined, { numeric: true }))
-  .map(([, src], index): GalleryImage => ({
+  .map(([path, src], index) => ({
+    filename: path.split('/').pop(),
     src,
     alt: `${invitation.couple.groom.shortName}과 ${invitation.couple.bride.shortName}의 결혼 사진 ${index + 1}`,
   }))
 
-export default function App() {
-  const [viewerIndex, setViewerIndex] = useState<number | null>(null)
-  const [galleryGridOpen, setGalleryGridOpen] = useState(false)
-  const galleryButtonRef = useRef<HTMLButtonElement>(null)
-  const viewerReturnToGrid = useRef(false)
-  const toast = useToast()
-  const { couple, wedding, account } = invitation
-  const visibleGallery = gallery.slice(0, invitation.gallery.previewCount)
+type GalleryView = { grid: boolean; index: number | null }
 
-  async function copyAccount() {
+function readGalleryView(): GalleryView {
+  const view = window.history.state?.invitationGallery
+  return {
+    grid: view?.grid === true,
+    index: Number.isInteger(view?.index) && gallery[view.index] ? view.index : null,
+  }
+}
+
+export default function App() {
+  const [galleryView, setGalleryView] = useState(readGalleryView)
+  const { grid: galleryGridOpen, index: viewerIndex } = galleryView
+  const closingGallery = useRef(false)
+
+  useEffect(() => {
+    function restoreGallery() {
+      closingGallery.current = false
+      setGalleryView(readGalleryView())
+    }
+    window.addEventListener('popstate', restoreGallery)
+    return () => window.removeEventListener('popstate', restoreGallery)
+  }, [])
+
+  function navigateGallery(next: GalleryView, replace = false) {
+    // Ignore late photo-scroll events once Back has left the viewer's history entry.
+    if (closingGallery.current || (replace && readGalleryView().index === null)) return
+    window.history[replace ? 'replaceState' : 'pushState']({ ...window.history.state, invitationGallery: next }, '')
+    setGalleryView(next)
+  }
+
+  function closeGallery() {
+    if (closingGallery.current) return
+    closingGallery.current = true
+    window.history.back()
+  }
+  const toast = useToast()
+  const { couple, wedding, accounts } = invitation
+  const visibleGallery = invitation.gallery.previewFiles
+    .map(filename => gallery.find(image => image.filename === filename))
+    .filter(image => image !== undefined)
+
+  async function copyAccount(account: (typeof invitation.accounts)[number]) {
     const copied = await copyText(`${account.bank} ${account.number} ${account.holder}`)
-    toast.show(copied ? '신랑 측 계좌번호를 복사했습니다.' : '복사하지 못했습니다. 다시 시도해 주세요.')
+    toast.show(copied ? `${account.label} 계좌번호를 복사했습니다.` : '복사하지 못했습니다. 다시 시도해 주세요.')
   }
 
   return (
@@ -42,11 +76,11 @@ export default function App() {
       <header className="cover" aria-labelledby="cover-title">
         <div className="cover__folio" aria-hidden="true">A LETTER · 01</div>
         <div className="cover__heading">
-          <p className="cover__eyebrow">우리, 같은 길을 걷습니다</p>
+          <p className="cover__eyebrow">우리 결혼합니다</p>
           <h1 id="cover-title"><span>{couple.groom.name}</span><i>&amp;</i><span>{couple.bride.name}</span></h1>
         </div>
         <figure className="cover__figure">
-          <img src={hero} srcSet={`${heroSmall} 800w, ${hero} 1200w`} sizes="(max-width: 600px) 100vw, 588px" alt={`푸른 하늘 아래 부케를 들고 마주 선 ${couple.groom.name}과 ${couple.bride.name}`} width="1200" height="1800" fetchPriority="high" />
+          <img src={hero} srcSet={`${heroSmall} 800w, ${hero} 1200w`} sizes="(max-width: 600px) 100vw, 588px" alt={`푸른 하늘 아래 함께 선 ${couple.groom.name}과 ${couple.bride.name}`} width="1200" height="1800" fetchPriority="high" />
           <figcaption>01 · NOVEMBER · 2026</figcaption>
         </figure>
         <div className="cover__facts">
@@ -88,7 +122,7 @@ export default function App() {
         <section className="date-section section-pad" aria-labelledby="date-title">
           <Reveal className="date-section__intro">
             <p className="kicker">THE DAY</p>
-            <h2 id="date-title"><span>2026</span>11월의<br />첫 번째 일요일</h2>
+            <h2 id="date-title"><span>2026</span>11월의 첫날</h2>
             <p>{wedding.date.display}<br />{wedding.venue.name} {wedding.venue.hall}</p>
           </Reveal>
           <Reveal className="date-section__calendar" delay={100}>
@@ -105,8 +139,8 @@ export default function App() {
           </Reveal>
           <div className="photo-essay__grid">
             {visibleGallery.map((image, index) => (
-              <Reveal className={`photo-essay__item item-${index + 1}`} delay={(index % 2) * 90} key={index}>
-                <button type="button" onClick={() => { viewerReturnToGrid.current = false; setViewerIndex(index) }} aria-label={`${index + 1}번 사진 크게 보기`}>
+              <Reveal className={`photo-essay__item item-${index + 1}`} delay={(index % 2) * 90} key={image.src}>
+                <button type="button" onClick={(event) => { event.currentTarget.focus({ preventScroll: true }); navigateGallery({ grid: false, index: gallery.indexOf(image) }) }} aria-label={`${index + 1}번 사진 크게 보기`}>
                   <img src={image.src} alt={image.alt} loading="lazy" />
                 </button>
                 <span>SCENE {String(index + 1).padStart(2, '0')}</span>
@@ -114,7 +148,7 @@ export default function App() {
             ))}
           </div>
           {visibleGallery.length < gallery.length && (
-            <button ref={galleryButtonRef} className="photo-essay__more" type="button" aria-haspopup="dialog" onClick={() => setGalleryGridOpen(true)}>
+            <button className="photo-essay__more" type="button" aria-haspopup="dialog" onClick={(event) => { event.currentTarget.focus({ preventScroll: true }); navigateGallery({ grid: true, index: null }) }}>
               사진 전체 보기 <span aria-hidden="true">{gallery.length}</span>
             </button>
           )}
@@ -142,13 +176,15 @@ export default function App() {
           <Reveal>
             <p className="kicker">WITH GRATITUDE</p>
             <h2 id="closing-title">축하의 마음을<br />오래 간직하겠습니다.</h2>
-            <details className="account">
-              <summary>신랑 측 마음 전하실 곳</summary>
-              <div className="account__body">
-                <p><span>{account.bank}</span><strong>{account.number}</strong><small>예금주 {account.holder}</small></p>
-                <button type="button" onClick={copyAccount}><Icon name="copy" /> 계좌번호 복사</button>
-              </div>
-            </details>
+            {accounts.map((account) => (
+              <details className="account" key={account.label}>
+                <summary>{account.label} 마음 전하실 곳</summary>
+                <div className="account__body">
+                  <p><span>{account.bank}</span><strong>{account.number}</strong><small>예금주 {account.holder}</small></p>
+                  <button type="button" onClick={() => copyAccount(account)}><Icon name="copy" /> 계좌번호 복사</button>
+                </div>
+              </details>
+            ))}
             <button className="share-action" type="button" onClick={async () => toast.show(await shareInvitation())}><Icon name="share" /> 초대장 공유하기</button>
           </Reveal>
           <p className="closing__names">{couple.groom.shortName} <i>&amp;</i> {couple.bride.shortName}</p>
@@ -158,10 +194,12 @@ export default function App() {
       <GalleryGrid
         images={gallery}
         open={galleryGridOpen}
-        onSelect={(index) => { viewerReturnToGrid.current = true; setGalleryGridOpen(false); setViewerIndex(index) }}
-        onClose={() => setGalleryGridOpen(false)}
+        onSelect={(index) => navigateGallery({ grid: true, index })}
+        onClose={closeGallery}
       />
-      <GalleryViewer images={gallery} index={viewerIndex} returnFocus={viewerReturnToGrid.current ? galleryButtonRef : undefined} onIndexChange={setViewerIndex} onClose={() => setViewerIndex(null)} />
+      {viewerIndex !== null && (
+        <GalleryViewer images={gallery} index={viewerIndex} onIndexChange={(index) => navigateGallery({ grid: galleryGridOpen, index }, true)} onClose={closeGallery} />
+      )}
       <Toast message={toast.message} />
     </div>
   )

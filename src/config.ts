@@ -3,24 +3,20 @@ export const invitation = {
     groom: {
       name: '이상혁',
       shortName: '상혁',
-      englishName: 'SANGHYUK LEE',
       parents: ['이현우', '길은희'],
       relation: '장남',
     },
     bride: {
       name: '이서윤',
       shortName: '서윤',
-      englishName: 'SEOYOON LEE',
       parents: ['이성철', '고재미'],
       relation: '장녀',
     },
   },
   wedding: {
     date: {
-      iso: '2026-11-01T14:00:00+09:00',
       dateOnly: '2026-11-01',
       display: '2026년 11월 1일 일요일 오후 2시',
-      compact: '2026. 11. 01  SUN  2:00 PM',
     },
     venue: {
       name: '더채플앳논현',
@@ -37,13 +33,22 @@ export const invitation = {
     ],
   },
   gallery: {
-    previewCount: 5,
+    previewFiles: ['01.jpg', '02.jpg', '03.jpg', '04.jpg', '11.jpg'],
   },
-  account: {
-    bank: '국민은행',
-    number: '445302-04-127854',
-    holder: '이상혁',
-  },
+  accounts: [
+    {
+      label: '신랑 측',
+      bank: '국민은행',
+      number: '445302-04-127854',
+      holder: '이상혁',
+    },
+    {
+      label: '신부 측',
+      bank: '하나은행',
+      number: '203-910528-23707',
+      holder: '이서윤',
+    }
+  ],
   share: {
     title: '상혁 ❤️ 서윤 결혼합니다',
   },

@@ -9,7 +9,7 @@ pnpm install
 pnpm dev
 ```
 
-청첩장 정보는 `src/config.ts`에서 관리합니다. 갤러리 사진은 `src/assets/gallery/`에 번호순으로 추가하고, 본문에 먼저 보일 사진 수는 `gallery.previewCount`로 조정합니다. 나머지는 전체보기 화면에 표시됩니다.
+청첩장 정보는 `src/config.ts`에서 관리합니다. 갤러리 사진은 `src/assets/gallery/`에 추가하고, 본문 사진은 `gallery.previewFiles`에 파일명을 원하는 순서로 지정합니다. 전체보기는 본문 선택과 관계없이 파일 번호순을 유지합니다.
 
 ## Supabase 설정
 
@@ -31,9 +31,12 @@ VITE_SUPABASE_PUBLISHABLE_KEY=Publishable key
 ## 빌드 확인
 
 ```bash
+pnpm test
 pnpm build
 pnpm preview
 ```
+
+갤러리 동작 검사는 `pnpm dev` 실행 후 `http://localhost:5173/tests/gallery.html`을 브라우저에서 엽니다. 테스트용 이미지만 사용하며 Supabase에 연결하지 않습니다.
 
 ## 배포
 

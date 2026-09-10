@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<title>Invitation smoke check</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<p id="result">Checking the invitation… Open this page through localhost.</p>
+<div id="root"></div>
+<script type="module">
+  import { createElement as h } from 'react'
+  import { createRoot } from 'react-dom/client'
+  import App from '/src/App.tsx'
+  import { invitation } from '/src/config.ts'
+  import '/src/style.css'
+
+  // Isolated test-page data: no Supabase requests or system clipboard writes.
+  const accounts = [
+    { label: '신랑 측', bank: '테스트 은행 A', number: '000-001', holder: '테스트 신랑' },
+    { label: '신부 측', bank: '테스트 은행 B', number: '000-002', holder: '테스트 신부' },
+  ]
+  const originalAccounts = invitation.accounts
+  const originalFetch = window.fetch
+  const originalClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard')
+  const copied = []
+  const originalHistoryState = history.state
+  const originalPush = history.pushState
+  const originalReplace = history.replaceState
+  let pushes = 0
+  let replacements = 0
+  const root = createRoot(document.getElementById('root'))
+  function assert(value, message) { if (!value) throw new Error(message) }
+  async function until(condition) {
+    for (let i = 0; i < 80; i++) {
+      if (condition()) return
+      await new Promise(resolve => setTimeout(resolve, 50))
+    }
+    throw new Error('Timed out: ' + condition)
+  }
+  try {
+    assert(window.isSecureContext, 'Use localhost or HTTPS so the clipboard mock is used')
+    invitation.accounts = accounts
+    window.fetch = async () => new Response('[]', { headers: { 'Content-Type': 'application/json' } })
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
+      writeText: async text => { copied.push(text) },
+    } })
+    history.pushState = function (...args) { pushes++; return originalPush.apply(this, args) }
+    history.replaceState = function (...args) { replacements++; return originalReplace.apply(this, args) }
+    root.render(h(App))
+    await until(() => document.querySelectorAll('.account').length === accounts.length)
+    const previews = [...document.querySelectorAll('.photo-essay__item button')]
+    const filename = image => decodeURIComponent(new URL(image.src).pathname).split('/').pop()
+    assert(previews.length === invitation.gallery.previewFiles.length, 'Every configured main photo must exist')
+    await Promise.all([...document.querySelectorAll('.cover__figure img, .photo-essay__item img')].map(image => {
+      image.loading = 'eager'
+      return image.decode()
+    }))
+    for (const [i, button] of previews.entries()) {
+      const image = button.querySelector('img')
+      assert(filename(image) === invitation.gallery.previewFiles[i], 'Main photos must follow the configured filenames, not gallery positions')
+      document.querySelector('.share-action').focus({ preventScroll: true })
+      button.scrollIntoView({ block: 'center', behavior: 'instant' })
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+      const pageScroll = window.scrollY
+      const previousPushes = pushes
+      button.click()
+      await until(() => document.querySelector('.viewer'))
+      assert(pushes === previousPushes + 1, 'Opening a main photo must push exactly one history entry')
+      const slides = [...document.querySelectorAll('.viewer__slide img')]
+      const index = slides.findIndex(slide => slide.src === image.src)
+      const names = slides.map(filename)
+      assert(JSON.stringify(names) === JSON.stringify([...names].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))), 'Full gallery order must remain independent of the main photos')
+      assert(index >= 0 && document.querySelector('.viewer__title').textContent === `${index + 1} / ${slides.length}`, 'Each main photo must open its own gallery position')
+      const rail = document.querySelector('.viewer__rail')
+      await until(() => Math.abs(rail.scrollLeft - index * rail.getBoundingClientRect().width) < 1)
+      assert(history.state.invitationGallery.index === index && !history.state.invitationGallery.grid, 'History must identify the main-page viewer')
+      if (i === 0) {
+        const length = history.length
+        const beforeReplace = replacements
+        document.querySelector('.viewer__nav--next').click()
+        await until(() => history.state.invitationGallery.index === (index + 1) % slides.length)
+        document.querySelector('.viewer__thumb:nth-child(3)').click()
+        await until(() => history.state.invitationGallery.index === 2)
+        assert(replacements > beforeReplace && pushes === previousPushes + 1, 'Arrows and thumbnails must replace, not push')
+        assert(history.length === length, 'Photo navigation must not grow the history stack')
+      }
+      if (i % 3 === 0) history.back()
+      else if (i % 3 === 1) {
+        const close = document.querySelector('.viewer__close')
+        close.click()
+        close.click() // A quick double tap must not go back two entries.
+      } else document.querySelector('.viewer').dispatchEvent(new Event('cancel', { cancelable: true }))
+      await until(() => !document.querySelector('.viewer'))
+      assert(history.state?.invitationGallery?.index == null, 'Back/Close/Escape must leave the photo history entry')
+      assert(document.activeElement === button, 'Closing must restore the selected main photo button even when clicking did not focus it')
+      assert(Math.abs(window.scrollY - pageScroll) < 1, `Closing main photo ${i + 1} must preserve page scroll (${pageScroll} → ${window.scrollY})`)
+      assert(!document.querySelector('.gallery-grid-view').open, 'Main photo close must not open the full gallery')
+      if (i === 0) {
+        history.forward()
+        await until(() => document.querySelector('.viewer__title')?.textContent === `3 / ${slides.length}`)
+        assert(pushes === previousPushes + 1, 'Forward must restore the replaced photo without pushing')
+        history.back()
+        await until(() => !document.querySelector('.viewer'))
+      }
+    }
+    const more = document.querySelector('.photo-essay__more')
+    more.scrollIntoView({ block: 'center', behavior: 'instant' })
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+    const pageScroll = window.scrollY
+    const beforeGridPushes = pushes
+    more.click()
+    await until(() => document.querySelector('.gallery-grid-view').matches(':modal'))
+    assert(pushes === beforeGridPushes + 1 && history.state.invitationGallery.grid, 'Opening the full gallery must push its own entry')
+    const grid = document.querySelector('.gallery-grid-view__grid')
+    grid.style.maxHeight = '240px'
+    grid.scrollTop = grid.scrollHeight
+    const gridScroll = grid.scrollTop
+    assert(gridScroll > 0, 'Exercise a scrolled gallery')
+    const selected = grid.querySelector('button:last-child')
+    for (const close of ['back', 'button', 'cancel']) {
+      document.querySelector('.gallery-grid-view__header button').focus({ preventScroll: true })
+      const previousPushes = pushes
+      selected.click()
+      await until(() => document.querySelector('.viewer'))
+      assert(pushes === previousPushes + 1 && history.state.invitationGallery.grid, 'A grid photo must push above the gallery entry')
+      assert(document.querySelectorAll(':modal').length === 2, 'Selecting a gallery photo must preserve the underlying grid')
+      if (close === 'back') history.back()
+      else if (close === 'button') document.querySelector('.viewer__close').click()
+      else document.querySelector('.viewer').dispatchEvent(new Event('cancel', { cancelable: true }))
+      await until(() => !document.querySelector('.viewer'))
+      assert(document.querySelector('.gallery-grid-view').matches(':modal'), 'Back, Close and Escape must return to the grid')
+      assert(history.state.invitationGallery.grid && history.state.invitationGallery.index === null, 'Closing must pop the photo entry, not replace it')
+      assert(document.activeElement === selected, 'Return focus to the selected grid photo')
+      assert(Math.abs(grid.scrollTop - gridScroll) < 1, 'Preserve the same grid scroll position across reopen')
+      assert(Math.abs(window.scrollY - pageScroll) < 1, 'Do not scroll the main page beneath the grid')
+    }
+    history.back()
+    await until(() => !document.querySelector('.gallery-grid-view').open)
+    assert(document.activeElement === more, 'Back from the grid returns focus to its main-page opener')
+    assert(Math.abs(window.scrollY - pageScroll) < 1, 'Back from the grid must preserve main-page scroll')
+    history.go(2)
+    await until(() => document.querySelectorAll(':modal').length === 2)
+    assert(document.activeElement.matches('.viewer__close'), 'Forward across both entries must put the viewer above the grid')
+    // Some browsers dismiss the entire native dialog group on Back after a reload.
+    const viewer = document.querySelector('.viewer')
+    viewer.dispatchEvent(new Event('cancel', { cancelable: false }))
+    viewer.close()
+    document.querySelector('.gallery-grid-view').close()
+    await until(() => !document.querySelector('.viewer'))
+    assert(document.querySelector('.gallery-grid-view').matches(':modal'), 'History must restore the grid even if native Back dismissed both dialogs')
+    document.querySelector('.gallery-grid-view__header button').click()
+    await until(() => !document.querySelector('.gallery-grid-view').open)
+    assert(!history.state?.invitationGallery?.grid, 'Closing the grid must pop its history entry exactly once')
+    const entries = [...document.querySelectorAll('.account')]
+    for (const [i, account] of accounts.entries()) {
+      const entry = entries[i]
+      assert(entry.querySelector('summary').textContent === `${account.label} 마음 전하실 곳`, 'Account label must match its entry')
+      assert(entry.querySelector('strong').textContent === account.number, 'Displayed account number must match its entry')
+      entry.querySelector('summary').click()
+      assert(entry.open, 'Each account must expand independently')
+      entry.querySelector('button').click()
+      await until(() => document.querySelector('.toast').textContent === `${account.label} 계좌번호를 복사했습니다.`)
+      assert(copied[i] === `${account.bank} ${account.number} ${account.holder}`, 'Each button must copy its own account, not the other entry')
+    }
+    assert(copied.length === accounts.length, 'Copy exactly once per click')
+    document.getElementById('result').textContent = 'Passed: push on open, replace on photo change, real Back/Forward, single-level Close/Escape, preserved main/grid scroll and focus, configured photos, and account clipboard payloads.'
+    document.body.dataset.result = 'passed'
+  } catch (error) {
+    document.getElementById('result').textContent = `FAILED: ${error.message}`
+    document.body.dataset.result = 'failed'
+    console.error(error)
+  } finally {
+    root.unmount()
+    invitation.accounts = originalAccounts
+    window.fetch = originalFetch
+    history.pushState = originalPush
+    history.replaceState = originalReplace
+    history.replaceState(originalHistoryState, '')
+    if (originalClipboard) Object.defineProperty(navigator, 'clipboard', originalClipboard)
+    else delete navigator.clipboard
+  }
+</script>
+</html>

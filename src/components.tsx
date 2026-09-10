@@ -87,15 +87,16 @@ export function GalleryGrid({ images, open, onSelect, onClose }: {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const titleId = useId()
 
-  useEffect(() => {
+  // Native close requests can dismiss both stacked dialogs; history remains authoritative.
+  useLayoutEffect(() => {
     const dialog = dialogRef.current
     if (!dialog) return
     if (open && !dialog.open) dialog.showModal()
     if (!open && dialog.open) dialog.close()
-  }, [open])
+  })
 
   return (
-    <dialog ref={dialogRef} className="gallery-grid-view" aria-labelledby={titleId} onClose={onClose}>
+    <dialog ref={dialogRef} className="gallery-grid-view" aria-labelledby={titleId} onCancel={(event) => { event.preventDefault(); onClose() }}>
       {open && (
         <>
           <header className="gallery-grid-view__header">
@@ -105,7 +106,7 @@ export function GalleryGrid({ images, open, onSelect, onClose }: {
           </header>
           <div className="gallery-grid-view__grid">
             {images.map((image, index) => (
-              <button type="button" onClick={() => { dialogRef.current?.close(); onSelect(index) }} aria-label={`${index + 1}번 사진 크게 보기`} key={index}>
+              <button type="button" onClick={(event) => { event.currentTarget.focus({ preventScroll: true }); onSelect(index) }} aria-label={`${index + 1}번 사진 크게 보기`} key={index}>
                 <img src={image.src} alt="" loading="lazy" />
                 <span>{String(index + 1).padStart(2, '0')}</span>
               </button>
@@ -117,79 +118,39 @@ export function GalleryGrid({ images, open, onSelect, onClose }: {
   )
 }
 
-export function GalleryViewer({ images, index, returnFocus, onIndexChange, onClose }: {
+export function GalleryViewer({ images, index, onIndexChange, onClose }: {
   images: GalleryImage[]
-  index: number | null
-  returnFocus?: { readonly current: HTMLElement | null }
+  index: number
   onIndexChange: (index: number) => void
   onClose: () => void
 }) {
   const titleId = useId()
+  const dialogRef = useRef<HTMLDialogElement>(null)
   const closeRef = useRef<HTMLButtonElement>(null)
   const railRef = useRef<HTMLDivElement>(null)
   const thumbsRef = useRef<HTMLDivElement>(null)
-  const previousFocus = useRef<HTMLElement | null>(null)
-  const isOpen = index !== null
 
   useLayoutEffect(() => {
-    if (!isOpen || index === null || !railRef.current) return
-    railRef.current.scrollLeft = railRef.current.clientWidth * index
-  }, [isOpen])
+    const dialog = dialogRef.current
+    const rail = railRef.current
+    if (!dialog || !rail) return
+    dialog.showModal()
+    closeRef.current?.focus({ preventScroll: true })
+    rail.scrollTo({ left: rail.clientWidth * index, behavior: 'instant' })
+    return () => dialog.close()
+  }, [])
 
   useEffect(() => {
-    if (!isOpen) return
-    previousFocus.current = document.activeElement as HTMLElement
-    const oldOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    closeRef.current?.focus()
-    return () => {
-      document.body.style.overflow = oldOverflow
-      const focusTarget = returnFocus?.current ?? previousFocus.current
-      focusTarget?.focus()
-    }
-  }, [isOpen])
-
-  useEffect(() => {
-    if (index === null) return
     const strip = thumbsRef.current
-    const thumb = strip?.querySelector<HTMLElement>(`[data-thumb-index="${index}"]`)
+    const thumb = strip?.querySelector<HTMLElement>('[aria-current="true"]')
     if (!strip || !thumb) return
-    strip.scrollTo({
-      left: thumb.offsetLeft - (strip.clientWidth - thumb.clientWidth) / 2,
-      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
-    })
+    strip.scrollTo({ left: thumb.offsetLeft - (strip.clientWidth - thumb.clientWidth) / 2 })
   }, [index])
-
-  useEffect(() => {
-    if (!isOpen || index === null) return
-    const currentIndex = index
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') onClose()
-      if (event.key === 'ArrowLeft') show((currentIndex - 1 + images.length) % images.length)
-      if (event.key === 'ArrowRight') show((currentIndex + 1) % images.length)
-      if (event.key === 'Tab') {
-        const dialog = document.querySelector<HTMLElement>('[data-gallery-dialog]')
-        const controls = dialog?.querySelectorAll<HTMLElement>('button')
-        if (!controls?.length) return
-        const first = controls[0]
-        const last = controls[controls.length - 1]
-        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
-        if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
-      }
-    }
-    document.addEventListener('keydown', onKeyDown)
-    return () => document.removeEventListener('keydown', onKeyDown)
-  }, [images.length, index, isOpen, onClose, onIndexChange])
-
-  if (index === null) return null
 
   function show(nextIndex: number) {
     const rail = railRef.current
     if (!rail) return
-    rail.scrollTo({
-      left: rail.clientWidth * nextIndex,
-      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
-    })
+    rail.scrollTo({ left: rail.clientWidth * ((nextIndex + images.length) % images.length) })
   }
 
   function updateIndex() {
@@ -200,27 +161,34 @@ export function GalleryViewer({ images, index, returnFocus, onIndexChange, onClo
   }
 
   return (
-    <div className="viewer" role="dialog" aria-modal="true" aria-labelledby={titleId} data-gallery-dialog>
-      <button className="viewer__backdrop" onClick={onClose} aria-label="사진 닫기" />
+    <dialog
+      ref={dialogRef}
+      className="viewer"
+      aria-labelledby={titleId}
+      onCancel={(event) => { event.preventDefault(); onClose() }}
+      onKeyDown={(event) => {
+        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+        event.preventDefault()
+        show(index + (event.key === 'ArrowLeft' ? -1 : 1))
+      }}
+    >
       <div className="viewer__stage">
         <p className="viewer__title" id={titleId}>{index + 1} / {images.length}</p>
         <div ref={railRef} className="viewer__rail" onScroll={updateIndex}>
           {images.map((image, imageIndex) => (
-            <div className="viewer__slide" data-active={imageIndex === index} key={imageIndex}>
+            <div className="viewer__slide" key={imageIndex}>
               <img src={image.src} alt={image.alt} draggable="false" />
             </div>
           ))}
         </div>
-        <button ref={closeRef} className="viewer__close" onClick={onClose} aria-label="사진 닫기">닫기</button>
-        <button className="viewer__nav viewer__nav--prev" onClick={() => show((index - 1 + images.length) % images.length)} aria-label="이전 사진">‹</button>
-        <button className="viewer__nav viewer__nav--next" onClick={() => show((index + 1) % images.length)} aria-label="다음 사진">›</button>
+        <button ref={closeRef} type="button" className="viewer__close" onClick={onClose} aria-label="사진 닫기">닫기</button>
+        <button type="button" className="viewer__nav viewer__nav--prev" onClick={() => show(index - 1)} aria-label="이전 사진">‹</button>
+        <button type="button" className="viewer__nav viewer__nav--next" onClick={() => show(index + 1)} aria-label="다음 사진">›</button>
         <div ref={thumbsRef} className="viewer__thumbs" role="group" aria-label="사진 미리보기">
           {images.map((image, imageIndex) => (
             <button
               type="button"
               className="viewer__thumb"
-              data-active={imageIndex === index}
-              data-thumb-index={imageIndex}
               aria-current={imageIndex === index ? 'true' : undefined}
               aria-label={`${imageIndex + 1}번째 사진 보기`}
               onClick={() => show(imageIndex)}
@@ -231,14 +199,13 @@ export function GalleryViewer({ images, index, returnFocus, onIndexChange, onClo
           ))}
         </div>
       </div>
-    </div>
+    </dialog>
   )
 }
 
-export function Icon({ name }: { name: 'calendar' | 'map' | 'copy' | 'share' }) {
+export function Icon({ name }: { name: 'calendar' | 'copy' | 'share' }) {
   const paths = {
     calendar: <><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></>,
-    map: <><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3Z"/><path d="M9 3v15M15 6v15"/></>,
     copy: <><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></>,
     share: <><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.5 6.8-4M8.6 13.5l6.8 4"/></>,
   }
