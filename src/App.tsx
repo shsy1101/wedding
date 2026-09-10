@@ -20,7 +20,7 @@ const gallery = Object.entries(import.meta.glob<string>('./assets/gallery/*.{jpg
   .sort(([left], [right]) => left.localeCompare(right, undefined, { numeric: true }))
   .map(([, src], index): GalleryImage => ({
     src,
-    alt: `${invitation.couple.groom.shortName}과 ${invitation.couple.bride.shortName}의 웨딩 사진 ${index + 1}`,
+    alt: `${invitation.couple.groom.shortName}과 ${invitation.couple.bride.shortName}의 결혼 사진 ${index + 1}`,
   }))
 
 export default function App() {
@@ -34,7 +34,7 @@ export default function App() {
 
   async function copyAccount() {
     const copied = await copyText(`${account.bank} ${account.number} ${account.holder}`)
-    toast.show(copied ? '신랑측 계좌번호를 복사했습니다.' : '복사하지 못했습니다. 다시 시도해 주세요.')
+    toast.show(copied ? '신랑 측 계좌번호를 복사했습니다.' : '복사하지 못했습니다. 다시 시도해 주세요.')
   }
 
   return (
@@ -46,7 +46,7 @@ export default function App() {
           <h1 id="cover-title"><span>{couple.groom.name}</span><i>&amp;</i><span>{couple.bride.name}</span></h1>
         </div>
         <figure className="cover__figure">
-          <img src={hero} srcSet={`${heroSmall} 800w, ${hero} 1200w`} sizes="(max-width: 600px) 100vw, 588px" alt={`나란히 서 있는 ${couple.groom.name}과 ${couple.bride.name}`} width="1200" height="1800" fetchPriority="high" />
+          <img src={hero} srcSet={`${heroSmall} 800w, ${hero} 1200w`} sizes="(max-width: 600px) 100vw, 588px" alt={`푸른 하늘 아래 부케를 들고 마주 선 ${couple.groom.name}과 ${couple.bride.name}`} width="1200" height="1800" fetchPriority="high" />
           <figcaption>01 · NOVEMBER · 2026</figcaption>
         </figure>
         <div className="cover__facts">
@@ -73,7 +73,7 @@ export default function App() {
         <section className="family section-pad" aria-labelledby="family-title">
           <Reveal>
             <div className="section-index">02 / OUR FAMILIES</div>
-            <h2 id="family-title" className="sr-only">혼주와 신랑 신부 소개</h2>
+            <h2 id="family-title" className="sr-only">신랑·신부와 양가 부모님 소개</h2>
             <div className="family__line">
               <p><strong>{couple.groom.parents.join(' · ')}</strong><span>의 {couple.groom.relation}</span></p>
               <div className="family__person"><span>신랑</span><b>{couple.groom.name}</b></div>
@@ -115,7 +115,7 @@ export default function App() {
           </div>
           {visibleGallery.length < gallery.length && (
             <button ref={galleryButtonRef} className="photo-essay__more" type="button" aria-haspopup="dialog" onClick={() => setGalleryGridOpen(true)}>
-              사진 전체보기 <span aria-hidden="true">{gallery.length}</span>
+              사진 전체 보기 <span aria-hidden="true">{gallery.length}</span>
             </button>
           )}
         </section>
@@ -143,7 +143,7 @@ export default function App() {
             <p className="kicker">WITH GRATITUDE</p>
             <h2 id="closing-title">축하의 마음을<br />오래 간직하겠습니다.</h2>
             <details className="account">
-              <summary>신랑측 마음 전하실 곳</summary>
+              <summary>신랑 측 마음 전하실 곳</summary>
               <div className="account__body">
                 <p><span>{account.bank}</span><strong>{account.number}</strong><small>예금주 {account.holder}</small></p>
                 <button type="button" onClick={copyAccount}><Icon name="copy" /> 계좌번호 복사</button>

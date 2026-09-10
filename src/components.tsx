@@ -100,7 +100,7 @@ export function GalleryGrid({ images, open, onSelect, onClose }: {
         <>
           <header className="gallery-grid-view__header">
             <p>PHOTO ARCHIVE · {String(images.length).padStart(2, '0')}</p>
-            <h2 id={titleId}>모든 사진</h2>
+            <h2 id={titleId}>사진 전체 보기</h2>
             <button type="button" onClick={onClose}>닫기</button>
           </header>
           <div className="gallery-grid-view__grid">
@@ -201,7 +201,7 @@ export function GalleryViewer({ images, index, returnFocus, onIndexChange, onClo
 
   return (
     <div className="viewer" role="dialog" aria-modal="true" aria-labelledby={titleId} data-gallery-dialog>
-      <button className="viewer__backdrop" onClick={onClose} aria-label="사진 보기 닫기" />
+      <button className="viewer__backdrop" onClick={onClose} aria-label="사진 닫기" />
       <div className="viewer__stage">
         <p className="viewer__title" id={titleId}>{index + 1} / {images.length}</p>
         <div ref={railRef} className="viewer__rail" onScroll={updateIndex}>
@@ -211,7 +211,7 @@ export function GalleryViewer({ images, index, returnFocus, onIndexChange, onClo
             </div>
           ))}
         </div>
-        <button ref={closeRef} className="viewer__close" onClick={onClose} aria-label="사진 보기 닫기">닫기</button>
+        <button ref={closeRef} className="viewer__close" onClick={onClose} aria-label="사진 닫기">닫기</button>
         <button className="viewer__nav viewer__nav--prev" onClick={() => show((index - 1 + images.length) % images.length)} aria-label="이전 사진">‹</button>
         <button className="viewer__nav viewer__nav--next" onClick={() => show((index + 1) % images.length)} aria-label="다음 사진">›</button>
         <div ref={thumbsRef} className="viewer__thumbs" role="group" aria-label="사진 미리보기">

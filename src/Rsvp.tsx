@@ -58,8 +58,8 @@ export default function Rsvp({ notify }: { notify: (message: string) => void }) 
     <section className="rsvp section-pad" aria-labelledby="rsvp-title">
       <Reveal>
         <p className="kicker">RSVP</p>
-        <h2 id="rsvp-title">참석 여부를 알려주세요</h2>
-        <p>귀한 걸음을 정성껏 준비할 수 있도록 참석 여부를 전해주시면 감사하겠습니다.</p>
+        <h2 id="rsvp-title">참석 여부를 알려 주세요</h2>
+        <p>예식과 식사를 정성껏 준비할 수 있도록 참석 여부를 알려 주시면 감사하겠습니다.</p>
         <button ref={openButtonRef} type="button" onClick={() => dialogRef.current?.showModal()}>참석 여부 전달하기</button>
       </Reveal>
 
@@ -72,7 +72,7 @@ export default function Rsvp({ notify }: { notify: (message: string) => void }) 
       >
         <header>
           <div><p>RSVP</p><h2 id={titleId}>참석 여부 전달</h2></div>
-          <button type="button" onClick={close} aria-label="참석 여부 작성 창 닫기"><span aria-hidden="true">×</span></button>
+          <button type="button" onClick={close} aria-label="참석 여부 입력 창 닫기"><span aria-hidden="true">×</span></button>
         </header>
 
         <form onSubmit={submit}>
@@ -81,8 +81,8 @@ export default function Rsvp({ notify }: { notify: (message: string) => void }) 
           <fieldset>
             <legend>구분</legend>
             <div className="rsvp-dialog__options">
-              <label><input type="radio" name="side" value="groom" required /><span>신랑측</span></label>
-              <label><input type="radio" name="side" value="bride" /><span>신부측</span></label>
+              <label><input type="radio" name="side" value="groom" required /><span>신랑 측</span></label>
+              <label><input type="radio" name="side" value="bride" /><span>신부 측</span></label>
             </div>
           </fieldset>
 
@@ -103,8 +103,8 @@ export default function Rsvp({ notify }: { notify: (message: string) => void }) 
             <label className="rsvp-dialog__field">식사 여부
               <select name="meal_type" required={attending === true} defaultValue="" disabled={attending !== true}>
                 <option value="" disabled>선택해 주세요</option>
-                <option value="yes">식사함</option>
-                <option value="no">식사안함</option>
+                <option value="yes">식사 예정</option>
+                <option value="no">식사 안 함</option>
                 <option value="undecided">미정</option>
               </select>
             </label>
@@ -117,7 +117,7 @@ export default function Rsvp({ notify }: { notify: (message: string) => void }) 
 
           <div className="rsvp-dialog__consent">
             <label><input type="checkbox" required /> 개인정보 수집 및 이용 동의 <strong>(필수)</strong></label>
-            <p>수집 항목: 성함, 구분, 참석·식사 여부, 참석 인원<br />이용 목적: 예식 참석 및 식사 인원 확인<br />보유 기간: 2026년 12월 1일까지</p>
+            <p>수집 항목: 성함, 구분, 참석 여부, 참석 인원, 식사 여부<br />이용 목적: 예식 참석 여부 및 식사 인원 확인<br />보유 기간: 2026년 12월 1일까지</p>
           </div>
 
           <label className="rsvp-dialog__website" aria-hidden="true">웹사이트<input name="website" tabIndex={-1} autoComplete="off" /></label>

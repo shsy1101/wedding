@@ -95,15 +95,15 @@ export default function Guestbook({ notify }: { notify: (message: string) => voi
     <section className="guestbook section-pad" aria-labelledby="guestbook-title">
       <Reveal>
         <p className="kicker">GUESTBOOK</p>
-        <h2 id="guestbook-title">축하의 말을 남겨주세요</h2>
-        <p className="guestbook__intro">두 사람에게 따뜻한 마음을 전해주시면 오래 간직하겠습니다.</p>
+        <h2 id="guestbook-title">축하의 말을 남겨 주세요</h2>
+        <p className="guestbook__intro">남겨 주신 따뜻한 마음은 두 사람이 오래 간직하겠습니다.</p>
       </Reveal>
 
       <Reveal className="guestbook__content" delay={100}>
         <div className="guestbook__list" aria-live="polite">
           {status === 'loading' && <p className="guestbook__status">방명록을 불러오는 중입니다.</p>}
           {status === 'error' && <p className="guestbook__status">방명록을 불러오지 못했습니다. <button type="button" onClick={() => void load()}>다시 시도</button></p>}
-          {status === 'ready' && entries.length === 0 && <p className="guestbook__status">첫 번째 축하 메시지를 남겨주세요.</p>}
+          {status === 'ready' && entries.length === 0 && <p className="guestbook__status">첫 번째 축하의 말을 남겨 주세요.</p>}
           {status === 'ready' && visibleEntries.map((entry) => (
             <article className="guestbook__entry" key={entry.id}>
               <header><strong>{entry.name}</strong><time dateTime={entry.created_at}>{dateFormatter.format(new Date(entry.created_at))}</time></header>
