@@ -1,4 +1,17 @@
+begin;
+
 create extension if not exists pgcrypto with schema extensions;
+
+create table if not exists public.guestbook (
+  id bigint generated always as identity not null,
+  name text not null,
+  password_hash text not null,
+  message text not null,
+  created_at timestamp with time zone not null default now(),
+  constraint guestbook_pkey primary key (id),
+  constraint guestbook_message_check check (length(message) >= 1 and length(message) <= 500),
+  constraint guestbook_name_check check (length(name) >= 1 and length(name) <= 20)
+) tablespace pg_default;
 
 alter table public.guestbook enable row level security;
 revoke all on public.guestbook from anon, authenticated;
@@ -56,3 +69,5 @@ revoke all on function public.add_guestbook_entry(text, text, text) from public,
 revoke all on function public.delete_guestbook_entry(bigint, text) from public, anon, authenticated;
 grant execute on function public.add_guestbook_entry(text, text, text) to anon;
 grant execute on function public.delete_guestbook_entry(bigint, text) to anon;
+
+commit;
