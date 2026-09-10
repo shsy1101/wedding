@@ -134,10 +134,17 @@ export function GalleryViewer({ images, index, onIndexChange, onClose }: {
     const dialog = dialogRef.current
     const rail = railRef.current
     if (!dialog || !rail) return
+    const previousDialog = document.activeElement?.closest<HTMLDialogElement>('dialog:modal')
+    const previousInert = previousDialog?.inert ?? false
     dialog.showModal()
+    // Explicitly block focus into the covered dialog, including in Safari.
+    if (previousDialog) previousDialog.inert = true
     closeRef.current?.focus({ preventScroll: true })
     rail.scrollTo({ left: rail.clientWidth * index, behavior: 'instant' })
-    return () => dialog.close()
+    return () => {
+      if (previousDialog) previousDialog.inert = previousInert
+      dialog.close()
+    }
   }, [])
 
   useEffect(() => {
