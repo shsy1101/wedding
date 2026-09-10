@@ -1,5 +1,7 @@
 node_modules/
 dist/
+src/assets/gallery.bak/
+src/assets/gallery.originals/
 .DS_Store
 *.local
 .env.local.*
