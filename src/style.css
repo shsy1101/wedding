@@ -165,7 +165,9 @@ body::before { content: ''; position: fixed; inset: 0; pointer-events: none; opa
 .rsvp-dialog__consent strong { color: var(--sunday); font-weight: 500; }
 .rsvp-dialog__consent p { margin: 12px 0 0 26px; color: var(--muted); font-size: var(--font-micro); line-height: 1.8; }
 .rsvp-dialog__submit { min-height: 48px; border: 0; background: var(--ink); color: var(--paper); font-size: var(--font-ui); cursor: pointer; }
-.rsvp-dialog__submit:disabled { opacity: .5; cursor: wait; }
+.rsvp-dialog > header button:disabled, .rsvp-dialog__submit:disabled { opacity: .5; cursor: wait; }
+.rsvp-dialog__error { margin: 0; color: #99534d; font-size: var(--font-meta); line-height: 1.65; }
+.rsvp-dialog__error:focus { outline: none; }
 .rsvp-dialog__website { position: absolute; left: -10000px; }
 .guestbook { background: #f7f3eb; }
 .guestbook h2 { margin: 0; font: 300 var(--font-section)/1.5 var(--font-serif); letter-spacing: .04em; }

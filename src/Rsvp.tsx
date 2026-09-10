@@ -1,4 +1,4 @@
-import { type FormEvent, useId, useRef, useState } from 'react'
+import { type FormEvent, useEffect, useId, useRef, useState } from 'react'
 import { Reveal } from './components'
 import { supabaseRequest } from './supabase'
 
@@ -8,6 +8,12 @@ export default function Rsvp({ notify }: { notify: (message: string) => void }) 
   const titleId = useId()
   const [attending, setAttending] = useState<boolean | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
+  const errorRef = useRef<HTMLParagraphElement>(null)
+
+  useEffect(() => {
+    if (error) errorRef.current?.focus()
+  }, [error])
 
   function restoreFocus() {
     window.setTimeout(() => openButtonRef.current?.focus(), 0)
@@ -27,6 +33,7 @@ export default function Rsvp({ notify }: { notify: (message: string) => void }) 
 
     const willAttend = data.get('attending') === 'yes'
     const message = String(data.get('message')).trim()
+    setError('')
     setSubmitting(true)
 
     try {
@@ -47,8 +54,10 @@ export default function Rsvp({ notify }: { notify: (message: string) => void }) 
       dialogRef.current?.close()
       restoreFocus()
       notify('참석 여부를 전달했습니다.')
-    } catch {
-      notify('참석 여부를 전달하지 못했습니다. 다시 시도해 주세요.')
+    } catch (error) {
+      setError(error instanceof DOMException && error.name === 'TimeoutError'
+        ? '응답 시간이 초과되어 전달 여부를 확인하지 못했습니다. 중복 제출을 피하려면 신랑·신부에게 확인해 주세요.'
+        : '참석 여부를 전달하지 못했습니다. 다시 시도해 주세요.')
     } finally {
       setSubmitting(false)
     }
@@ -72,7 +81,7 @@ export default function Rsvp({ notify }: { notify: (message: string) => void }) 
       >
         <header>
           <div><p>RSVP</p><h2 id={titleId}>참석 여부 전달</h2></div>
-          <button type="button" onClick={close} aria-label="참석 여부 입력 창 닫기"><span aria-hidden="true">×</span></button>
+          <button type="button" onClick={close} disabled={submitting} aria-label="참석 여부 입력 창 닫기"><span aria-hidden="true">×</span></button>
         </header>
 
         <form onSubmit={submit}>
@@ -121,6 +130,7 @@ export default function Rsvp({ notify }: { notify: (message: string) => void }) 
           </div>
 
           <label className="rsvp-dialog__website" aria-hidden="true">웹사이트<input name="website" tabIndex={-1} autoComplete="off" /></label>
+          {error && <p ref={errorRef} className="rsvp-dialog__error" role="alert" tabIndex={-1}>{error}</p>}
           <button className="rsvp-dialog__submit" type="submit" disabled={submitting}>{submitting ? '전달하는 중…' : '참석 여부 전달하기'}</button>
         </form>
       </dialog>
