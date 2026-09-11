@@ -38,16 +38,32 @@ export const invitation = {
   accounts: [
     {
       label: '신랑 측',
-      bank: '국민은행',
-      number: '445302-04-127854',
-      holder: '이상혁',
+      entries: [
+        {
+          label: '신랑',
+          bank: '국민은행',
+          number: '445302-04-127854',
+          holder: '이상혁',
+        },
+        {
+          label: '아버지',
+          bank: '하나은행',
+          number: '132-891106-23207',
+          holder: '이현우',
+        },
+      ],
     },
     {
       label: '신부 측',
-      bank: '하나은행',
-      number: '203-910528-23707',
-      holder: '이서윤',
-    }
+      entries: [
+        {
+          label: '신부',
+          bank: '하나은행',
+          number: '203-910528-23707',
+          holder: '이서윤',
+        },
+      ],
+    },
   ],
   share: {
     title: '상혁 ❤️ 서윤 결혼합니다',

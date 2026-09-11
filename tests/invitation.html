@@ -13,8 +13,13 @@
 
   // Isolated test-page data: no Supabase requests or system clipboard writes.
   const accounts = [
-    { label: '신랑 측', bank: '테스트 은행 A', number: '000-001', holder: '테스트 신랑' },
-    { label: '신부 측', bank: '테스트 은행 B', number: '000-002', holder: '테스트 신부' },
+    { label: '신랑 측', entries: [
+      { label: '신랑', bank: '테스트 은행 A', number: '000-000000-00001', holder: '테스트 신랑' },
+      { label: '아버지', bank: '테스트 은행 B', number: '000-000000-00002', holder: '테스트 아버지' },
+    ] },
+    { label: '신부 측', entries: [
+      { label: '신부', bank: '테스트 은행 C', number: '000-000000-00003', holder: '테스트 신부' },
+    ] },
   ]
   const originalAccounts = invitation.accounts
   const originalFetch = window.fetch
@@ -148,19 +153,37 @@
     document.querySelector('.gallery-grid-view__header button').click()
     await until(() => !document.querySelector('.gallery-grid-view').open)
     assert(!history.state?.invitationGallery?.grid, 'Closing the grid must pop its history entry exactly once')
-    const entries = [...document.querySelectorAll('.account')]
-    for (const [i, account] of accounts.entries()) {
-      const entry = entries[i]
-      assert(entry.querySelector('summary').textContent === `${account.label} 마음 전하실 곳`, 'Account label must match its entry')
-      assert(entry.querySelector('strong').textContent === account.number, 'Displayed account number must match its entry')
-      entry.querySelector('summary').click()
-      assert(entry.open, 'Each account must expand independently')
-      entry.querySelector('button').click()
-      await until(() => document.querySelector('.toast').textContent === `${account.label} 계좌번호를 복사했습니다.`)
-      assert(copied[i] === `${account.bank} ${account.number} ${account.holder}`, 'Each button must copy its own account, not the other entry')
+    const groups = [...document.querySelectorAll('.account')]
+    assert(groups.length === 2, 'Only groom-side and bride-side disclosures should be shown')
+    for (const [i, group] of accounts.entries()) {
+      const section = groups[i]
+      assert(section.querySelector('summary').textContent === `${group.label} 마음 전하실 곳`, 'Disclosure label must identify the family side')
+      section.querySelector('summary').click()
+      assert(section.open, 'Each family side must expand independently')
+      const rows = [...section.querySelectorAll('.account__body')]
+      assert(rows.length === group.entries.length, 'Family accounts must appear inside their own side')
+      for (const [j, account] of group.entries.entries()) {
+        const row = rows[j]
+        assert(row.querySelector('span').textContent === `${account.label} ${account.holder}`, 'Each row must identify its role and holder')
+        assert(row.querySelector('span small').textContent === account.label, 'The smaller role label must identify its account')
+        assert(row.querySelector('p > small').textContent === `${account.bank} ${account.number}`, 'Bank and account number must match their entry')
+        const lines = [...row.querySelector('p').children]
+        assert(lines.length === 2 && lines.every(line => getComputedStyle(line).fontWeight === '400'), 'Account details must use two regular-weight lines')
+        const accountRange = document.createRange()
+        accountRange.selectNodeContents(row.querySelector('p > small'))
+        assert(new Set(Array.from(accountRange.getClientRects(), rect => rect.top)).size === 1, 'Bank and account number must share one line')
+        const rowRect = row.getBoundingClientRect()
+        const buttonRect = row.querySelector('button').getBoundingClientRect()
+        assert(Math.round(buttonRect.width) >= 44 && Math.round(buttonRect.height) >= 44, 'Borderless copy actions must retain a 44px tap target')
+        assert(buttonRect.left >= rowRect.left - 1 && buttonRect.right <= rowRect.right + 1, 'Copy buttons must fit even on narrow screens')
+        assert(row.querySelector('button').getAttribute('aria-label') === `${account.label} ${account.holder} 계좌번호 복사`, 'Copy buttons must identify their account accessibly')
+        row.querySelector('button').click()
+        await until(() => document.querySelector('.toast').textContent === `${account.holder} 님의 계좌번호를 복사했습니다.`)
+      }
     }
-    assert(copied.length === accounts.length, 'Copy exactly once per click')
-    document.getElementById('result').textContent = 'Passed: push on open, replace on photo change, real Back/Forward, single-level Close/Escape, preserved main/grid scroll and focus, configured photos, and account clipboard payloads.'
+    assert(groups.every(group => group.open), 'Opening one family side must not close the other')
+    assert(JSON.stringify(copied) === JSON.stringify(accounts.flatMap(group => group.entries.map(account => `${account.bank} ${account.number} ${account.holder}`))), 'Copy each account exactly once, including the father’s account')
+    document.getElementById('result').textContent = 'Passed: push on open, replace on photo change, real Back/Forward, single-level Close/Escape, preserved main/grid scroll and focus, configured photos, and grouped family accounts with matching clipboard payloads.'
     document.body.dataset.result = 'passed'
   } catch (error) {
     document.getElementById('result').textContent = `FAILED: ${error.message}`

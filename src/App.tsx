@@ -66,9 +66,9 @@ export default function App() {
     .map(filename => gallery.find(image => image.filename === filename))
     .filter(image => image !== undefined)
 
-  async function copyAccount(account: (typeof invitation.accounts)[number]) {
+  async function copyAccount(account: (typeof invitation.accounts)[number]['entries'][number]) {
     const copied = await copyText(`${account.bank} ${account.number} ${account.holder}`)
-    toast.show(copied ? `${account.label} 계좌번호를 복사했습니다.` : '복사하지 못했습니다. 다시 시도해 주세요.')
+    toast.show(copied ? `${account.holder} 님의 계좌번호를 복사했습니다.` : '복사하지 못했습니다. 다시 시도해 주세요.')
   }
 
   return (
@@ -176,13 +176,15 @@ export default function App() {
           <Reveal>
             <p className="kicker">WITH GRATITUDE</p>
             <h2 id="closing-title">축하의 마음을<br />오래 간직하겠습니다.</h2>
-            {accounts.map((account) => (
-              <details className="account" key={account.label}>
-                <summary>{account.label} 마음 전하실 곳</summary>
-                <div className="account__body">
-                  <p><span>{account.bank}</span><strong>{account.number}</strong><small>예금주 {account.holder}</small></p>
-                  <button type="button" onClick={() => copyAccount(account)}><Icon name="copy" /> 계좌번호 복사</button>
-                </div>
+            {accounts.map((group) => (
+              <details className="account" key={group.label}>
+                <summary>{group.label} 마음 전하실 곳</summary>
+                {group.entries.map((account) => (
+                  <div className="account__body" key={account.label}>
+                    <p><span><small>{account.label}</small> {account.holder}</span><small>{account.bank} {account.number}</small></p>
+                    <button type="button" onClick={() => copyAccount(account)} aria-label={`${account.label} ${account.holder} 계좌번호 복사`}><Icon name="copy" /> 복사</button>
+                  </div>
+                ))}
               </details>
             ))}
             <button className="share-action" type="button" onClick={async () => toast.show(await shareInvitation())}><Icon name="share" /> 초대장 공유하기</button>

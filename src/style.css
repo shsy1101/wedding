@@ -195,16 +195,17 @@ body::before { content: ''; position: fixed; inset: 0; pointer-events: none; opa
 .closing { min-height: 720px; text-align: center; background: var(--paper-deep); }
 .closing h2 { margin: 0; font: 300 var(--font-section)/1.7 var(--font-serif); word-break: keep-all; }
 .account { margin-top: 64px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); text-align: left; }
-.account + .account { margin-top: 16px; }
+.account + .account { margin-top: 32px; }
 .account summary { min-height: 54px; display: flex; align-items: center; justify-content: space-between; list-style: none; font-size: var(--font-meta); cursor: pointer; }
 .account summary::-webkit-details-marker { display: none; }
 .account summary::after { content: '+'; font-size: var(--font-disclosure); font-weight: 300; }
 .account[open] summary::after { content: '−'; }
-.account__body { padding: 18px 0 24px; display: flex; justify-content: space-between; align-items: end; gap: 10px; border-top: 1px solid var(--line); }
-.account__body p { margin: 0; display: grid; gap: 5px; }
-.account__body span, .account__body small { color: var(--muted); font-size: var(--font-small); }
-.account__body strong { font-size: var(--font-compact); font-weight: 500; letter-spacing: .03em; }
-.account__body button { min-height: 44px; padding: 0 12px; display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line); background: transparent; font-size: var(--font-small); cursor: pointer; }
+.account__body { padding: 24px 0; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; border-top: 1px solid rgba(41,43,37,.12); }
+.account__body p { margin: 0; display: grid; gap: 8px; }
+.account__body span { display: flex; align-items: baseline; gap: 10px; font: 400 var(--font-body)/1.5 var(--font-serif); }
+.account__body small { color: color-mix(in srgb, var(--ink) 70%, var(--paper-deep)); font: 400 var(--font-meta)/1.6 var(--font-sans); }
+.account__body span small { min-width: 3em; font-size: var(--font-small); }
+.account__body button { min-width: 44px; min-height: 44px; padding: 0; display: inline-flex; align-items: center; gap: 7px; border: 0; background: transparent; font-size: var(--font-small); cursor: pointer; }
 .share-action { min-height: 48px; margin: 24px auto 0; padding: 0 22px; display: inline-flex; align-items: center; gap: 9px; border: 1px solid var(--ink); background: transparent; font-size: var(--font-ui); cursor: pointer; }
 .cover__scroll, .text-action, .photo-essay__more, .venue__links a, .account summary, .account__body button, .share-action { white-space: nowrap; }
 .closing__names { margin: 110px 0 0; color: var(--muted); font: 400 var(--font-label)/1 var(--font-latin); letter-spacing: .22em; }
