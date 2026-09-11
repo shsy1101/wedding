@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<title>Gallery smoke check</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<p id="result">Checking gallery… Open this page through the Vite dev server.</p>
+<div id="root"></div>
+<script type="module">
+  import { createElement as h, StrictMode, useState } from 'react'
+  import { createRoot } from 'react-dom/client'
+  import { GalleryGrid, GalleryViewer } from '/src/components.tsx'
+  import '/src/style.css'
+
+  // Synthetic images: no dependency on the wedding photos or Supabase.
+  const images = Array.from({ length: 6 }, (_, i) => {
+    const [width, height] = [[400, 600], [600, 400], [400, 400]][i % 3]
+    return {
+      src: 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="100%" height="100%" fill="#69705a"/></svg>`),
+      alt: `Test photo ${i + 1}`,
+    }
+  })
+  function Demo() {
+    const [index, setIndex] = useState(null)
+    const [gridOpen, setGridOpen] = useState(false)
+    return h('div', null,
+      h('div', { className: 'photo-essay__grid' }, images.slice(0, 5).map((image, i) =>
+        h('div', { className: `photo-essay__item item-${i + 1}`, key: i },
+          h('button', { type: 'button' }, h('img', image)),
+          h('span', null, `SCENE ${i + 1}`)))),
+      h('button', { id: 'open', onClick: () => setIndex(1) }, 'Open photo 2'),
+      h('button', { id: 'grid', onClick: () => setGridOpen(true) }, 'Open grid'),
+      h(GalleryGrid, { images, open: gridOpen, onClose: () => setGridOpen(false), onSelect: setIndex }),
+      index !== null && h(GalleryViewer, { images, index, onIndexChange: setIndex, onClose: () => setIndex(null) }),
+    )
+  }
+  const root = createRoot(document.getElementById('root'))
+  const $ = selector => document.querySelector(selector)
+  function assert(value, message) { if (!value) throw new Error(message) }
+  async function until(condition) {
+    for (let i = 0; i < 80; i++) {
+      if (condition()) return
+      await new Promise(resolve => setTimeout(resolve, 50))
+    }
+    throw new Error('Timed out: ' + condition)
+  }
+  async function select(control, number) {
+    $(control).click()
+    await until(() => $('.viewer__title')?.textContent === `${number} / ${images.length}`)
+    await until(() => Math.abs($('.viewer__rail').scrollLeft - (number - 1) * $('.viewer__rail').getBoundingClientRect().width) < 1)
+  }
+  try {
+    root.render(h(StrictMode, null, h(Demo)))
+    await until(() => $('#open'))
+    const previews = [...document.querySelectorAll('.photo-essay__item img')]
+    await Promise.all(previews.map(image => image.decode()))
+    assert(previews.length === 5, 'Check all five main photo layouts')
+    for (const image of previews) {
+      const rect = image.getBoundingClientRect()
+      const frame = image.parentElement.getBoundingClientRect()
+      assert(Math.abs(rect.height - rect.width * image.naturalHeight / image.naturalWidth) < 1, 'Main photos must preserve their natural proportions')
+      assert(Math.abs(frame.height - rect.height) < 1, 'Main photo frames must fit the complete image')
+    }
+    $('#open').focus()
+    await select('#open', 2)
+    assert($('.viewer') instanceof HTMLDialogElement && $('.viewer').matches(':modal'), 'Viewer must be a native modal')
+    assert(document.activeElement.matches('.viewer__close'), 'Close button must receive initial focus')
+    $('#open').focus()
+    assert($('.viewer').contains(document.activeElement), 'Background must be inert')
+    assert(getComputedStyle(document.documentElement).overflow === 'hidden', 'Page scrolling must be locked')
+    await select('.viewer__nav--prev', 1)
+    await select('.viewer__nav--prev', images.length)
+    await select('.viewer__nav--next', 1)
+    await select('.viewer__thumb:nth-child(2)', 2)
+    assert($('.viewer__thumb:nth-child(2)').getAttribute('aria-current') === 'true', 'Active thumbnail must track navigation')
+    $('.viewer').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }))
+    await until(() => $('.viewer__title').textContent === `3 / ${images.length}`)
+    $('.viewer').dispatchEvent(new Event('cancel', { cancelable: true }))
+    await until(() => !$('.viewer'))
+    assert(document.activeElement === $('#open'), 'Cancel must restore inline opener focus')
+    assert(getComputedStyle(document.documentElement).overflow !== 'hidden', 'Closing must unlock page scrolling')
+    await select('#open', 2)
+    $('.viewer__close').click()
+    await until(() => !$('.viewer'))
+    $('#grid').focus()
+    $('#grid').click()
+    await until(() => $('.gallery-grid-view').matches(':modal'))
+    const grid = $('.gallery-grid-view__grid')
+    grid.style.height = '120px' // Force overflow so compressed/overlapping grid rows cannot pass.
+    await Promise.all([...grid.querySelectorAll('img')].map(image => { image.loading = 'eager'; return image.decode() }))
+    const columns = getComputedStyle(grid).gridTemplateColumns.split(' ').length
+    const tiles = [...grid.querySelectorAll('button')].map(button => button.getBoundingClientRect())
+    assert(grid.scrollHeight > grid.clientHeight, 'Grid must scroll when its tiles exceed the available height')
+    tiles.forEach((tile, i) => {
+      assert(Math.abs(tile.width - tile.height) < 1, 'Gallery tiles must stay square')
+      if (i >= columns) assert(tile.top >= tiles[i - columns].bottom, 'Gallery rows must not overlap')
+    })
+    grid.scrollTop = grid.scrollHeight
+    const gridScroll = grid.scrollTop
+    const selected = grid.querySelector('button:last-child')
+    await select('.gallery-grid-view__grid button:last-child', images.length)
+    assert(document.querySelectorAll(':modal').length === 2, 'Viewer must stack above the still-open grid')
+    assert($('.gallery-grid-view').inert, 'Covered grid must be explicitly inert')
+    $('.gallery-grid-view__header button').focus()
+    assert($('.viewer').contains(document.activeElement), 'Underlying grid must be inert while viewing a photo')
+    $('.viewer__close').click()
+    await until(() => !$('.viewer'))
+    assert($('.gallery-grid-view').matches(':modal'), 'Close must return to the grid, not the main page')
+    assert(!$('.gallery-grid-view').inert, 'Closing the photo must make the grid interactive again')
+    assert(document.activeElement === selected, 'Closing must restore the selected grid photo button')
+    assert(Math.abs(grid.scrollTop - gridScroll) < 1, 'Closing must preserve grid scroll position')
+    assert(getComputedStyle(document.documentElement).overflow === 'hidden', 'Main page must remain locked beneath the grid')
+    $('.gallery-grid-view__header button').click()
+    await until(() => !$('.gallery-grid-view').open)
+    assert(document.activeElement === $('#grid'), 'Closing the grid must restore its main-page opener')
+    assert(getComputedStyle(document.documentElement).overflow !== 'hidden', 'Closing the last dialog must unlock the page')
+    $('#result').textContent = 'Passed: all five main photo proportions, square/non-overlapping grid tiles, modal focus, scroll locking, navigation, and stacked grid/viewer return with preserved scroll.'
+    document.body.dataset.result = 'passed'
+  } catch (error) {
+    $('#result').textContent = `FAILED: ${error.message}`
+    document.body.dataset.result = 'failed'
+    console.error(error)
+  } finally {
+    root.unmount()
+  }
+</script>
+</html>
