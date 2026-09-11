@@ -1,19 +1,19 @@
 * { box-sizing: border-box; }
 :root {
   /* Increase this percentage to scale the entire type system. */
-  --font-root: 106.25%;
+  --font-root: 112.5%;
   --font-sans: 'Noto Sans KR', system-ui, sans-serif;
   --font-serif: 'Noto Serif KR', serif;
   --font-latin: Georgia, serif;
-  --font-micro: .5rem;
-  --font-label: .5625rem;
-  --font-small: .625rem;
-  --font-ui: .6875rem;
-  --font-meta: .75rem;
-  --font-caption: .8125rem;
-  --font-compact: .875rem;
-  --font-body: .9375rem;
-  --font-lead: 1.0625rem;
+  --font-micro: .625rem;
+  --font-label: .6875rem;
+  --font-small: .75rem;
+  --font-ui: .8125rem;
+  --font-meta: .875rem;
+  --font-caption: .9375rem;
+  --font-compact: 1rem;
+  --font-body: 1.0625rem;
+  --font-lead: 1.1875rem;
   --font-disclosure: 1.125rem;
   --font-subheading: 1.1875rem;
   --font-cover-min: 1.375rem;
@@ -56,7 +56,7 @@ body::before { content: ''; position: fixed; inset: 0; pointer-events: none; opa
 .cover__heading { grid-column: 1 / -1; }
 .cover__eyebrow { margin: 0; color: var(--olive); font: 300 var(--font-caption)/1.5 var(--font-serif); letter-spacing: .04em; white-space: nowrap; }
 .cover h1 { margin: 10px 0 0; display: flex; align-items: baseline; gap: 8px; font: 400 var(--font-cover-title)/1 var(--font-serif); letter-spacing: .08em; }
-.cover h1 i { color: var(--olive); font: italic 300 var(--font-caption)/1 var(--font-latin); }
+.cover h1 i { color: var(--olive); font: italic 300 .8125rem/1 var(--font-latin); }
 .cover__figure { position: relative; grid-column: 1 / -1; margin: 0; min-height: 0; overflow: hidden; background: #ddd8cf; }
 .cover__figure img { width: 100%; height: 100%; min-height: 52svh; object-fit: cover; object-position: center 37%; animation: settle 1.5s cubic-bezier(.2,.7,.2,1) both; }
 .cover__figure figcaption { position: absolute; right: 0; bottom: 0; padding: 10px 12px; background: var(--paper); color: var(--muted); font-size: var(--font-micro); letter-spacing: .18em; }
@@ -270,7 +270,6 @@ body::before { content: ''; position: fixed; inset: 0; pointer-events: none; opa
 @media (max-width: 340px) {
   .cover { padding-inline: 16px; }
   .section-pad { padding-inline: 20px; }
-  .letter__copy { font-size: var(--font-compact); }
   .account__body { align-items: flex-start; flex-direction: column; }
 }
 @media (prefers-reduced-motion: reduce) {
