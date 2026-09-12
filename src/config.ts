@@ -62,6 +62,18 @@ export const invitation = {
           number: '203-910528-23707',
           holder: '이서윤',
         },
+        {
+          label: '아버지',
+          bank: '카카오뱅크',
+          number: '3333-31-8591010',
+          holder: '이성철',
+        },
+        {
+          label: '어머니',
+          bank: '신한은행',
+          number: '110-011-136219',
+          holder: '고재미',
+        },
       ],
     },
   ],
